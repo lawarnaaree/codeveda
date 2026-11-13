@@ -4,16 +4,30 @@ import StatusBadge from '../../components/StatusBadge.jsx'
 import { formatCurrency } from '../../data/inventory.js'
 import OrderDialog from './OrderDialog.jsx'
 
-function Orders({ orders, products, onCreateOrder }) {
+function Orders({ canUpdateStatus, orders, products, onCreateOrder, onUpdateStatus }) {
   const [statusFilter, setStatusFilter] = useState('All orders')
   const [query, setQuery] = useState('')
   const [isCreating, setIsCreating] = useState(false)
+  const [updatingOrderId, setUpdatingOrderId] = useState('')
+  const [statusError, setStatusError] = useState('')
   const availableStock = products.some((product) => product.quantity > 0)
   const filteredOrders = useMemo(() => orders.filter((order) => {
     const matchesStatus = statusFilter === 'All orders' || order.status === statusFilter
     const matchesQuery = `${order.id} ${order.customerName}`.toLowerCase().includes(query.trim().toLowerCase())
     return matchesStatus && matchesQuery
   }), [orders, query, statusFilter])
+
+  const markAsShipped = async (orderId) => {
+    setUpdatingOrderId(orderId)
+    setStatusError('')
+    try {
+      await onUpdateStatus(orderId, 'Shipped')
+    } catch (error) {
+      setStatusError(error.message)
+    } finally {
+      setUpdatingOrderId('')
+    }
+  }
 
   return (
     <div className="page-stack">
@@ -36,6 +50,7 @@ function Orders({ orders, products, onCreateOrder }) {
       {!availableStock && (
         <p className="data-note">Add a product with available stock before creating an order</p>
       )}
+      {statusError && <p className="form-error" role="alert">{statusError}</p>}
       <section className="panel">
         <div className="table-toolbar">
           <label className="table-search">
@@ -55,7 +70,12 @@ function Orders({ orders, products, onCreateOrder }) {
         </div>
         <div className="table-scroll">
           <table className="data-table">
-            <thead><tr><th>Order</th><th>Customer</th><th>Created</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Order</th><th>Customer</th><th>Created</th><th>Items</th><th>Total</th><th>Status</th>
+                {canUpdateStatus && <th>Actions</th>}
+              </tr>
+            </thead>
             <tbody>
               {filteredOrders.map((order) => (
                 <tr key={order.id}>
@@ -65,6 +85,20 @@ function Orders({ orders, products, onCreateOrder }) {
                   <td>{order.itemCount}</td>
                   <td className="table-primary">{formatCurrency(order.total)}</td>
                   <td><StatusBadge tone={order.status === 'Shipped' ? 'positive' : order.status === 'Processing' ? 'info' : 'neutral'}>{order.status}</StatusBadge></td>
+                  {canUpdateStatus && (
+                    <td>
+                      {order.status === 'Processing' && (
+                        <button
+                          className="text-button"
+                          disabled={updatingOrderId === order.id}
+                          onClick={() => markAsShipped(order.id)}
+                          type="button"
+                        >
+                          {updatingOrderId === order.id ? 'Updating' : 'Mark shipped'}
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

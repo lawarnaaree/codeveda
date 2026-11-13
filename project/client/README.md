@@ -46,8 +46,9 @@ silently substitute demo records.
 - Admin-only team listing
 - NPR formatting for monetary values
 
-The server has Socket.IO support, but live notification listeners are not yet
-connected. Order status editing and user-role editing are not available in the interface.
+Admins and inventory managers can mark Processing orders as Shipped. The
+server has Socket.IO support, but live notification listeners are not yet
+connected. User-role editing is not available in the interface.
 
 ## Validate
 

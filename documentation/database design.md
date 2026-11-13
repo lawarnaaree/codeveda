@@ -27,7 +27,8 @@ precision is preserved.
 - Roles: `admin`, `inventory_manager`, and `warehouse_staff`. Registration
   always creates `warehouse_staff`.
 - Order statuses: `Ready to fulfill`, `Processing`, and `Shipped`. New orders
-  start as `Processing`.
+  start as `Processing`; only admins and inventory managers can transition a
+  Processing order to Shipped.
 - Orders store one customer name. Products are archived rather than deleted.
 - Monetary values use PostgreSQL `NUMERIC(12, 2)` and are denominated in
   Nepalese rupees (NPR). The currency is fixed for this application rather

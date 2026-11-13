@@ -173,6 +173,21 @@ function App() {
     setRefreshVersion((version) => version + 1)
   }
 
+  const updateOrderStatus = async (orderId, status) => {
+    await apiRequest(`/orders/${encodeURIComponent(orderId)}/status`, {
+      method: 'PATCH',
+      body: { status },
+    })
+    setWorkspace((current) => ({
+      ...current,
+      orders: current.orders.map((order) => (
+        order.id === orderId ? { ...order, status } : order
+      )),
+    }))
+    setDataError('')
+    setRefreshVersion((version) => version + 1)
+  }
+
   const handleSearch = (value) => {
     setSearch(value)
     if (value.trim()) setActivePage('products')
@@ -201,7 +216,9 @@ function App() {
   } else if (activePage === 'orders') {
     page = (
       <Orders
+        canUpdateStatus={canManageInventory}
         onCreateOrder={createOrder}
+        onUpdateStatus={updateOrderStatus}
         orders={workspace.orders}
         products={workspace.products}
       />

@@ -19,14 +19,16 @@ object. Errors use `{ "error": { "code": "...", "message": "..." } }`.
 | `DELETE` | `/api/products/:id` | Archive a product while retaining history | Admin or inventory manager |
 | `GET` | `/api/orders` | List orders | Authenticated |
 | `POST` | `/api/orders` | Create an order and deduct stock atomically | Authenticated |
+| `PATCH` | `/api/orders/:id/status` | Mark a processing order as shipped | Admin or inventory manager |
 | `GET` | `/api/stock-movements` | View stock history | Admin or inventory manager |
 | `POST` | `/api/stock-movements` | Record a stock adjustment | Admin or inventory manager |
 | `GET` | `/api/users` | List users | Admin |
 | `PATCH` | `/api/users/:id/role` | Change a user's role | Admin |
 
 Order statuses are `Ready to fulfill`, `Processing`, and `Shipped`. New orders
-start as `Processing`. This API currently has no endpoint for changing an
-order's status.
+start as `Processing`. The only allowed status transition is `Processing` to
+`Shipped`; this change is available to admins and inventory managers. Other
+transitions return `409 INVALID_ORDER_STATUS_TRANSITION`.
 
 ## Request examples
 
@@ -66,6 +68,17 @@ Create an order with:
 The server reads current product prices, saves order-item snapshots, calculates
 the total, deducts inventory, and records stock movements in one transaction.
 Clients must not send trusted prices or totals.
+
+Mark an order as shipped with `PATCH /api/orders/12/status` and:
+
+```json
+{
+  "status": "Shipped"
+}
+```
+
+The server locks the order row during the transition and publishes an
+`order:status-changed` event after the transaction commits.
 
 Create a manual stock movement with
 `{ "productId": "12", "quantityChange": -2, "reason": "Cycle count" }`.

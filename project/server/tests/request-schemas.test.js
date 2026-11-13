@@ -6,9 +6,14 @@ import {
   idSchema,
   updateProductSchema,
 } from '../src/validators/product.schemas.js'
-import { createOrderSchema } from '../src/validators/order.schemas.js'
+import {
+  createOrderSchema,
+  updateOrderStatusSchema,
+} from '../src/validators/order.schemas.js'
 import { createStockMovementSchema } from '../src/validators/stockMovement.schemas.js'
 import { updateUserRoleSchema } from '../src/validators/user.schemas.js'
+import { authorize } from '../src/middlewares/authorize.js'
+import { canTransitionOrderStatus } from '../src/utils/orderStatus.js'
 
 test('registration normalizes email and never accepts a caller-selected role', () => {
   const result = registerSchema.parse({
@@ -88,6 +93,31 @@ test('orders reject duplicate product lines and require a customer name', () => 
   assert.equal(createOrderSchema.safeParse({
     items: [baseItem],
   }).success, false)
+})
+
+test('order status changes only allow processing to shipped', () => {
+  assert.equal(updateOrderStatusSchema.safeParse({ status: 'Shipped' }).success, true)
+  assert.equal(updateOrderStatusSchema.safeParse({ status: 'Ready to fulfill' }).success, false)
+  assert.equal(canTransitionOrderStatus('Processing', 'Shipped'), true)
+  assert.equal(canTransitionOrderStatus('Processing', 'Ready to fulfill'), false)
+  assert.equal(canTransitionOrderStatus('Ready to fulfill', 'Shipped'), false)
+  assert.equal(canTransitionOrderStatus('Shipped', 'Processing'), false)
+})
+
+test('order status authorization allows managers and admins only', () => {
+  const checkRole = (role) => {
+    let authorizationError
+    authorize('admin', 'inventory_manager')(
+      { user: { role } },
+      {},
+      (error) => { authorizationError = error },
+    )
+    return authorizationError
+  }
+
+  assert.equal(checkRole('admin'), undefined)
+  assert.equal(checkRole('inventory_manager'), undefined)
+  assert.equal(checkRole('warehouse_staff').statusCode, 403)
 })
 
 test('stock adjustments must be non-zero and roles must be recognized', () => {

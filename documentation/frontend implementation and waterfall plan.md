@@ -15,8 +15,8 @@ The project notes were reviewed before implementation. The API and database cont
 [`api  documentation.md`](./api%20%20documentation.md) defines the routes,
 validation, response/error shapes, cookie session, and role permissions used by
 the client. Login, registration, session restore, products, order listing,
-stock history, and admin user listing are wired. Order creation/status editing
-and realtime notifications are not yet available in the interface.
+stock history, admin user listing, order creation, and the agreed order-status
+change are wired. Realtime notifications are not yet available in the interface.
 
 ### Database design
 
@@ -52,9 +52,9 @@ displayed as Nepalese rupees (NPR) using the `en-NP` locale.
 The frontend implements login/registration, authenticated dashboard data,
 searchable products, product create/edit/archive, order creation and
 listing/filtering, admin team listing, and role-aware stock history.
-Notifications are clearly marked as not connected until the Socket.IO client
-is added. Order status editing still needs an API endpoint and documented
-transition rules.
+Order status can be changed from `Processing` to `Shipped` by admins and
+inventory managers. Notifications are clearly marked as not connected until
+the Socket.IO client is added.
 
 ### Initial UI audit and design direction
 
@@ -77,9 +77,9 @@ security boundary.
 ## Waterfall delivery record
 
 The work follows the sequential Waterfall phases. Requirements, design,
-implementation, build verification, and initial authenticated API checks are
-complete. Remaining work includes order-status changes, live notifications,
-and production readiness.
+implementation, build verification, authenticated API checks, and order-status
+updates are complete. Remaining work includes live notifications and production
+readiness.
 
 ### Phase 1 — Requirements analysis
 
@@ -134,16 +134,15 @@ adding real records.
 
 Remaining integration and deployment work:
 
-1. Define order-status transition and permission rules, then implement the API endpoint and client controls.
-2. Connect the authenticated Socket.IO client and replace the disconnected notification panel.
-3. Define deployment, TLS, backups, recovery, and monitoring procedures.
+1. Connect the authenticated Socket.IO client and replace the disconnected notification panel.
+2. Define deployment, TLS, backups, recovery, and monitoring procedures.
 
 ## Screen and behavior traceability
 
 | Documented requirement | Implemented view/behavior | Current limitation |
 | --- | --- | --- |
 | Stock summary and low-stock alerts | Overview metrics and reorder list | Verified with an empty database; populated inventory is not yet available |
-| Recent activity/orders | Recent orders table, filters, and create-order flow | Order status editing needs an API endpoint |
+| Recent activity/orders | Recent orders table, filters, create-order flow, and ship action | Status update is limited to Processing → Shipped |
 | Product search, filter, CRUD | API-backed search, low-stock filter, create/edit/archive | Write actions were not run because no catalog products exist yet |
 | Product details and stock status | Detail dialog with API values | Role-gated editing is also enforced by the server |
 | User roles and active states | Admin-only API-backed team view | Role changes are not in the UI |

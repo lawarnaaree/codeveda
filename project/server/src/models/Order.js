@@ -92,3 +92,24 @@ export async function findOrderById(id, queryable) {
 
   return result.rows[0] ?? null
 }
+
+export async function findOrderStatusForUpdate(id, queryable) {
+  const result = await queryable.query(
+    `SELECT id::text AS id, status
+     FROM orders
+     WHERE id = $1
+     FOR UPDATE`,
+    [id],
+  )
+
+  return result.rows[0] ?? null
+}
+
+export async function updateOrderStatus(id, status, queryable) {
+  await queryable.query(
+    `UPDATE orders
+     SET status = $2
+     WHERE id = $1`,
+    [id, status],
+  )
+}

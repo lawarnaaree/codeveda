@@ -15,7 +15,8 @@ The backend includes PostgreSQL migrations, authentication, product, order,
 stock-movement, and user APIs, plus authenticated Socket.IO events. The React
 client uses the cookie-session API for login, product and order data, inventory
 updates, stock history, and admin user listing. Live Socket.IO notifications
-and order creation/status editing are not yet wired into the interface.
+are not yet wired into the interface. New orders can be created from the client,
+and admins or inventory managers can mark Processing orders as Shipped.
 
 The intended request path is:
 
@@ -708,8 +709,8 @@ used for a direct API origin; it must never contain a secret.
 Product catalog operations, order creation and listing, admin team listing,
 dashboard summaries, and role-based stock movement visibility now use the API.
 Prices are displayed as Nepalese rupees (NPR). To finish the client workflow,
-define order-status transitions and permissions before adding an update
-endpoint and UI controls. Connect an authenticated Socket.IO client for
+status updates allow only `Processing` to `Shipped` and are restricted to
+admins and inventory managers. Connect an authenticated Socket.IO client for
 notifications. Show loading, empty, and error states explicitly; never
 silently replace failed server data with demo records.
 
@@ -729,12 +730,12 @@ Complete and test each step before moving to the next:
 | 8. Implement orders | Compute totals and update order, inventory, and movements atomically | Implemented transactionally |
 | 9. Connect React | Login/session, products, orders, stock, and team views | Admin sign-in and all list screens verified; product/order lists are empty |
 | 10. Add Socket.IO client | Authenticate sockets and publish post-commit events | Server is implemented; client listeners remain |
-| 11. Finish order workflows | Create orders and update allowed statuses from the UI | Creation implemented; status update requires documented rules and API support |
+| 11. Finish order workflows | Create orders and update allowed statuses from the UI | Create and `Processing` to `Shipped` implemented |
 | 12. Verify and deploy | Test, configure production secrets/TLS, backups, and recovery | Remaining |
 
-The next step is to define order-status transitions and role permissions,
-then implement the status-update API and connect the client. Avoid production
-migrations or deployment changes without a reviewed plan and backup.
+The next step is to connect the authenticated Socket.IO client for live
+notifications, then prepare deployment, TLS, backups, recovery, and monitoring.
+Avoid production changes without a reviewed plan and backup.
 
 ## Further reading
 

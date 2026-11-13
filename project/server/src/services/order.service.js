@@ -1,7 +1,12 @@
 import * as orderModel from '../models/Order.js'
 import * as productModel from '../models/Product.js'
 import { createStockMovement } from '../models/StockMovement.js'
-import { publishOrderCreated, publishStockChanged } from '../sockets/utils/realtime.js'
+import {
+  publishOrderCreated,
+  publishOrderStatusChanged,
+  publishStockChanged,
+} from '../sockets/utils/realtime.js'
+import { canTransitionOrderStatus } from '../utils/orderStatus.js'
 import { HttpError } from '../utils/HttpError.js'
 import { withTransaction } from './withTransaction.js'
 
@@ -82,5 +87,28 @@ export async function createOrder(input, actorId) {
     publishStockChanged(change)
   }
 
+  return order
+}
+
+export async function updateOrderStatus(id, status) {
+  const order = await withTransaction(async (client) => {
+    const current = await orderModel.findOrderStatusForUpdate(id, client)
+    if (!current) {
+      throw new HttpError(404, 'ORDER_NOT_FOUND', 'Order was not found')
+    }
+
+    if (!canTransitionOrderStatus(current.status, status)) {
+      throw new HttpError(
+        409,
+        'INVALID_ORDER_STATUS_TRANSITION',
+        'Only processing orders can be marked as shipped',
+      )
+    }
+
+    await orderModel.updateOrderStatus(id, status, client)
+    return orderModel.findOrderById(id, client)
+  })
+
+  publishOrderStatusChanged({ orderId: order.id, status: order.status })
   return order
 }

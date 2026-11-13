@@ -19,3 +19,7 @@ export function publishStockChanged(stock) {
 export function publishOrderCreated(order) {
   getSocketServer().emit('order:created', order)
 }
+
+export function publishOrderStatusChanged(order) {
+  getSocketServer().emit('order:status-changed', order)
+}

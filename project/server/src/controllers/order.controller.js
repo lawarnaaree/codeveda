@@ -24,3 +24,15 @@ export async function postOrder(req, res, next) {
     next(error)
   }
 }
+
+export async function patchOrderStatus(req, res, next) {
+  try {
+    const order = await orderService.updateOrderStatus(
+      req.validatedParams.id,
+      req.validatedBody.status,
+    )
+    res.json({ data: order })
+  } catch (error) {
+    next(error)
+  }
+}
