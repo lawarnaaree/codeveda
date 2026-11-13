@@ -42,13 +42,12 @@ silently substitute demo records.
 - Login, public registration, session restore, and logout
 - Dashboard metrics and seven-day stock-movement summary
 - Product search, creation, editing, and archiving
-- Order listing and status filtering
+- Order creation, listing, and status filtering
 - Admin-only team listing
 - NPR formatting for monetary values
 
 The server has Socket.IO support, but live notification listeners are not yet
-connected. Order creation/status editing and user-role editing are also not
-available in the interface.
+connected. Order status editing and user-role editing are not available in the interface.
 
 ## Validate
 

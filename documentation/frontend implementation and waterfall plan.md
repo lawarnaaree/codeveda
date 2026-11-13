@@ -50,9 +50,11 @@ displayed as Nepalese rupees (NPR) using the `en-NP` locale.
 7. Notifications for low stock, order changes, and real-time updates
 
 The frontend implements login/registration, authenticated dashboard data,
-searchable products, product create/edit/archive, order listing/filtering,
-admin team listing, and role-aware stock history. Notifications are clearly
-marked as not connected until the Socket.IO client is added.
+searchable products, product create/edit/archive, order creation and
+listing/filtering, admin team listing, and role-aware stock history.
+Notifications are clearly marked as not connected until the Socket.IO client
+is added. Order status editing still needs an API endpoint and documented
+transition rules.
 
 ### Initial UI audit and design direction
 
@@ -75,9 +77,9 @@ security boundary.
 ## Waterfall delivery record
 
 The work follows the sequential Waterfall phases. Requirements, design,
-implementation, and build verification are complete; API integration is in
-progress and production readiness remains gated on database migration and
-deployment decisions.
+implementation, build verification, and initial authenticated API checks are
+complete. Remaining work includes order-status changes, live notifications,
+and production readiness.
 
 ### Phase 1 — Requirements analysis
 
@@ -103,7 +105,7 @@ deployment decisions.
 1. Built the shared navigation, workspace identity, search, and notification affordances.
 2. Built summary metrics, stock movement visualization, reorder alerts, and recent orders.
 3. Added API-backed product search/filtering, an empty state, a details view, and create/edit/archive flows.
-4. Added order status filtering and a role/status team overview.
+4. Added order creation and status filtering, plus an admin-only team view.
 5. Applied responsive, keyboard-focus, reduced-motion, and form-validation behavior.
 6. Moved the misplaced `project/server/sockets/` directory beneath `project/server/src/`.
 
@@ -118,30 +120,31 @@ pnpm lint
 pnpm build
 ```
 
-Manual smoke-check: open the dashboard, navigate each screen, search and filter products/orders, create, edit, and delete a product, inspect the notification panel, and verify the layout at desktop and mobile widths.
+Manual smoke-check: sign in, open dashboard/products/orders/team, and verify
+empty states. Product and order write flows need seeded development records
+before they can be exercised safely.
 
 **Exit output:** Client `pnpm lint` and `pnpm build` pass. The local browser
-smoke check confirms the sign-in and registration screens, and `/api/health`
-returns HTTP 200. Authenticated CRUD verification still requires applied
-migrations and a development admin account.
+check verified admin sign-in and loaded dashboard, products, orders, and team
+views. The API health check returned HTTP 200. The database currently has no
+products or orders, so product/order write flows could not be exercised without
+adding real records.
 
 ### Phase 5 — Integration, deployment, and maintenance
 
 Remaining integration and deployment work:
 
-1. Apply the migration to the confirmed development database and create an initial admin.
-2. Verify browser login, permissions, product mutations, and database-backed lists against that database.
-3. Add order creation/status workflows to the client if required.
-4. Add the authenticated Socket.IO client and replace the disconnected notification panel.
-5. Define deployment, TLS, backups, recovery, and monitoring procedures.
+1. Define order-status transition and permission rules, then implement the API endpoint and client controls.
+2. Connect the authenticated Socket.IO client and replace the disconnected notification panel.
+3. Define deployment, TLS, backups, recovery, and monitoring procedures.
 
 ## Screen and behavior traceability
 
 | Documented requirement | Implemented view/behavior | Current limitation |
 | --- | --- | --- |
-| Stock summary and low-stock alerts | Overview metrics and reorder list | Requires migrated development database for browser validation |
-| Recent activity/orders | Recent orders table and orders view | Order creation and status editing are not in the UI |
-| Product search, filter, CRUD | API-backed search, low-stock filter, create/edit/archive | Requires migrated development database for browser validation |
+| Stock summary and low-stock alerts | Overview metrics and reorder list | Verified with an empty database; populated inventory is not yet available |
+| Recent activity/orders | Recent orders table, filters, and create-order flow | Order status editing needs an API endpoint |
+| Product search, filter, CRUD | API-backed search, low-stock filter, create/edit/archive | Write actions were not run because no catalog products exist yet |
 | Product details and stock status | Detail dialog with API values | Role-gated editing is also enforced by the server |
 | User roles and active states | Admin-only API-backed team view | Role changes are not in the UI |
 | Login and registration | Cookie-session login/registration | Initial admin is bootstrapped from the server CLI |
@@ -157,7 +160,7 @@ project/client/src/
   features/
     auth/           login and registration
     dashboard/      overview metrics and stock movement
-    orders/         order listing and status filter
+    orders/         order creation, listing, and status filter
     products/       catalog and product dialog
     team/             workspace roles and member states
   styles/           application layout and responsive styles

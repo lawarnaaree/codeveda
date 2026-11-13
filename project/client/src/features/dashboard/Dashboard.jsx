@@ -26,7 +26,7 @@ function toCents(amount) {
   return BigInt(whole || '0') * 100n + BigInt(cents || '0')
 }
 
-function Dashboard({ canViewStock, orders, products, stockMovement, onNavigate, onSelectProduct }) {
+function Dashboard({ canViewStock, orders, products, stockMovements, onNavigate, onSelectProduct }) {
   const totals = useMemo(() => {
     const units = products.reduce((sum, product) => sum + Number(product.quantity || 0), 0)
     const valueCents = products.reduce(
@@ -45,8 +45,8 @@ function Dashboard({ canViewStock, orders, products, stockMovement, onNavigate, 
     .filter((product) => getProductStatus(product) === 'Low stock')
     .slice(0, 3)
   const openOrders = orders.filter((order) => order.status !== 'Shipped').length
-  const addedPath = buildLine(stockMovement.map((item) => item.added))
-  const removedPath = buildLine(stockMovement.map((item) => item.removed))
+  const addedPath = buildLine(stockMovements.map((item) => item.added))
+  const removedPath = buildLine(stockMovements.map((item) => item.removed))
   const addedArea = `${addedPath} L ${chartWidth - chartPadding.right} ${chartHeight - chartPadding.bottom} L ${chartPadding.left} ${chartHeight - chartPadding.bottom} Z`
   const currentDate = new Intl.DateTimeFormat('en-NP', {
     weekday: 'long',
@@ -116,7 +116,7 @@ function Dashboard({ canViewStock, orders, products, stockMovement, onNavigate, 
                 <span><i className="legend-dot legend-dot--removed" /> Removed</span>
                 <span className="chart-legend__period">Units</span>
               </div>
-              {stockMovement.some((item) => item.added || item.removed) ? (
+              {stockMovements.some((item) => item.added || item.removed) ? (
                 <div className="chart-wrap">
                   <svg
                     aria-label="Daily stock units added and removed during the last seven days"
@@ -132,7 +132,7 @@ function Dashboard({ canViewStock, orders, products, stockMovement, onNavigate, 
                     <path className="chart-area" d={addedArea} />
                     <path className="chart-line chart-line--added" d={addedPath} />
                     <path className="chart-line chart-line--removed" d={removedPath} />
-                    {stockMovement.map((item, index) => {
+                    {stockMovements.map((item, index) => {
                       const x = chartPadding.left + ((chartWidth - chartPadding.left - chartPadding.right) / 6) * index
                       return (
                         <text className="chart-label" key={item.day} textAnchor="middle" x={x} y={chartHeight - 4}>

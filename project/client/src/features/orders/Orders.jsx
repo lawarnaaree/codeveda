@@ -2,10 +2,13 @@ import { useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
 import StatusBadge from '../../components/StatusBadge.jsx'
 import { formatCurrency } from '../../data/inventory.js'
+import OrderDialog from './OrderDialog.jsx'
 
-function Orders({ orders }) {
+function Orders({ orders, products, onCreateOrder }) {
   const [statusFilter, setStatusFilter] = useState('All orders')
   const [query, setQuery] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
+  const availableStock = products.some((product) => product.quantity > 0)
   const filteredOrders = useMemo(() => orders.filter((order) => {
     const matchesStatus = statusFilter === 'All orders' || order.status === statusFilter
     const matchesQuery = `${order.id} ${order.customerName}`.toLowerCase().includes(query.trim().toLowerCase())
@@ -20,7 +23,19 @@ function Orders({ orders }) {
           <h1>Orders</h1>
           <p className="page-heading__description">Track customer orders from processing to delivery</p>
         </div>
+        <button
+          className="button button--primary"
+          disabled={!availableStock}
+          onClick={() => setIsCreating(true)}
+          title={availableStock ? undefined : 'Add a product with available stock before creating an order'}
+          type="button"
+        >
+          Create order
+        </button>
       </section>
+      {!availableStock && (
+        <p className="data-note">Add a product with available stock before creating an order</p>
+      )}
       <section className="panel">
         <div className="table-toolbar">
           <label className="table-search">
@@ -57,6 +72,16 @@ function Orders({ orders }) {
           {!filteredOrders.length && <div className="empty-state"><Search aria-hidden="true" size={22} /><h2>No orders found</h2><p>Try a different search or status</p></div>}
         </div>
       </section>
+      {isCreating && (
+        <OrderDialog
+          onClose={() => setIsCreating(false)}
+          onCreate={async (order) => {
+            await onCreateOrder(order)
+            setIsCreating(false)
+          }}
+          products={products}
+        />
+      )}
     </div>
   )
 }

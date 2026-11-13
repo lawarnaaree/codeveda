@@ -21,7 +21,7 @@ const pageTitles = {
 const emptyWorkspace = {
   products: [],
   orders: [],
-  stockMovement: [],
+  stockMovements: [],
   users: [],
 }
 
@@ -167,6 +167,12 @@ function App() {
     setRefreshVersion((version) => version + 1)
   }
 
+  const createOrder = async (order) => {
+    await apiRequest('/orders', { method: 'POST', body: order })
+    setDataError('')
+    setRefreshVersion((version) => version + 1)
+  }
+
   const handleSearch = (value) => {
     setSearch(value)
     if (value.trim()) setActivePage('products')
@@ -193,7 +199,13 @@ function App() {
       />
     )
   } else if (activePage === 'orders') {
-    page = <Orders orders={workspace.orders} />
+    page = (
+      <Orders
+        onCreateOrder={createOrder}
+        orders={workspace.orders}
+        products={workspace.products}
+      />
+    )
   } else if (activePage === 'team' && canViewTeam) {
     page = <Team members={workspace.users} />
   } else {
@@ -204,7 +216,7 @@ function App() {
         onSelectProduct={openProduct}
         orders={workspace.orders}
         products={workspace.products}
-        stockMovement={workspace.stockMovement}
+        stockMovements={workspace.stockMovements}
       />
     )
   }

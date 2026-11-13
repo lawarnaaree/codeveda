@@ -705,38 +705,36 @@ login/registration screen, loads paginated data, and shows request errors
 instead of silently falling back to demo values. `VITE_API_BASE_URL` may be
 used for a direct API origin; it must never contain a secret.
 
-Product catalog operations, order listing, admin team listing, dashboard
-summaries, and role-based stock movement visibility now use the API. Prices
-are displayed as Nepalese rupees (NPR). To finish the client workflow, add
-order creation/status editing and connect an authenticated Socket.IO client
-for notifications. Show loading, empty, and error states explicitly; never
+Product catalog operations, order creation and listing, admin team listing,
+dashboard summaries, and role-based stock movement visibility now use the API.
+Prices are displayed as Nepalese rupees (NPR). To finish the client workflow,
+define order-status transitions and permissions before adding an update
+endpoint and UI controls. Connect an authenticated Socket.IO client for
+notifications. Show loading, empty, and error states explicitly; never
 silently replace failed server data with demo records.
 
 ## 12. Recommended implementation order
 
 Complete and test each step before moving to the next:
 
-| Step | Work | Done when |
-| --- | --- | --- |
 | Step | Work | Status / done when |
 | --- | --- | --- |
 | 1. Confirm contracts | Roles, order/customer shape, statuses, response format, and archive behavior | Done and reflected in the API and database documentation |
 | 2. Initialize server | ESM package, dependencies, scripts, `.gitignore`, and `.env.example` | Done |
 | 3. Connect database | Validate config, shared pool, health check | Verified with the configured database; health endpoint returned HTTP 200 |
-| 4. Create migrations | Users, products, orders, items, and stock movements | Implemented; apply to the confirmed development database |
+| 4. Create migrations | Users, products, orders, items, and stock movements | Migration applied to the confirmed development database |
 | 5. Implement product API | Queries, validation, service, controller, routes, and tests | Implemented |
 | 6. Implement authentication | Password hashing, sessions, authorization, and rate limits | Implemented |
 | 7. Implement stock history | Persist signed changes with actor and reason | Implemented transactionally |
 | 8. Implement orders | Compute totals and update order, inventory, and movements atomically | Implemented transactionally |
-| 9. Connect React | Login/session, products, orders, stock, and team views | Implemented; end-to-end verification needs migrated tables and a test account |
+| 9. Connect React | Login/session, products, orders, stock, and team views | Admin sign-in and all list screens verified; product/order lists are empty |
 | 10. Add Socket.IO client | Authenticate sockets and publish post-commit events | Server is implemented; client listeners remain |
-| 11. Finish order workflows | Create orders and update allowed statuses from the UI | Remaining; API currently lists and creates orders only |
+| 11. Finish order workflows | Create orders and update allowed statuses from the UI | Creation implemented; status update requires documented rules and API support |
 | 12. Verify and deploy | Test, configure production secrets/TLS, backups, and recovery | Remaining |
 
-Next, apply the numbered migration to the confirmed development database,
-create the initial admin, and run browser/API checks with that account. Do not
-run migrations against a production or unknown database without explicit
-confirmation and a backup.
+The next step is to define order-status transitions and role permissions,
+then implement the status-update API and connect the client. Avoid production
+migrations or deployment changes without a reviewed plan and backup.
 
 ## Further reading
 
