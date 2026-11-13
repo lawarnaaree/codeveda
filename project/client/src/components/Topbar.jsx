@@ -5,6 +5,7 @@ function Topbar({
   search,
   onSearch,
   isNotificationsOpen,
+  notificationCount,
   onToggleNotifications,
   onLogout,
 }) {
@@ -28,12 +29,13 @@ function Topbar({
         </label>
         <button
           aria-expanded={isNotificationsOpen}
-          aria-label={isNotificationsOpen ? 'Close notifications' : 'Open notifications'}
+          aria-label={`${isNotificationsOpen ? 'Close' : 'Open'} notifications${notificationCount ? `, ${notificationCount} unread` : ''}`}
           className="icon-button notification-button"
           onClick={onToggleNotifications}
           type="button"
         >
           <Bell aria-hidden="true" size={18} strokeWidth={1.7} />
+          {notificationCount > 0 && <span className="notification-button__dot" />}
         </button>
         <button className="button button--secondary topbar__logout" onClick={onLogout} type="button">
           <LogOut aria-hidden="true" size={15} />

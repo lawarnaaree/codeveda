@@ -8,7 +8,8 @@ The project notes were reviewed before implementation. The API and database cont
 
 [`system architecture.md`](./system%20architecture.md) describes a React browser client calling a Node.js/Express JSON API. The server owns authentication, authorization, validation, and business logic; PostgreSQL is accessed through the `pg` driver. Socket.IO is the intended channel for real-time updates.
 
-**Implementation consequence:** the Vite/React client uses the Express JSON API for authentication and operational data. Socket.IO events are supported by the server but are not yet subscribed to by the client.
+**Implementation consequence:** the Vite/React client uses the Express JSON
+API and authenticated Socket.IO for session and operational updates.
 
 ### API documentation
 
@@ -16,7 +17,8 @@ The project notes were reviewed before implementation. The API and database cont
 validation, response/error shapes, cookie session, and role permissions used by
 the client. Login, registration, session restore, products, order listing,
 stock history, admin user listing, order creation, and the agreed order-status
-change are wired. Realtime notifications are not yet available in the interface.
+change and realtime stock/order notifications are wired. Notifications are
+transient; events received while disconnected are not replayed.
 
 ### Database design
 
@@ -53,8 +55,8 @@ The frontend implements login/registration, authenticated dashboard data,
 searchable products, product create/edit/archive, order creation and
 listing/filtering, admin team listing, and role-aware stock history.
 Order status can be changed from `Processing` to `Shipped` by admins and
-inventory managers. Notifications are clearly marked as not connected until
-the Socket.IO client is added.
+inventory managers. The notification panel shows the Socket.IO connection and
+received stock/order events.
 
 ### Initial UI audit and design direction
 
@@ -77,9 +79,9 @@ security boundary.
 ## Waterfall delivery record
 
 The work follows the sequential Waterfall phases. Requirements, design,
-implementation, build verification, authenticated API checks, and order-status
-updates are complete. Remaining work includes live notifications and production
-readiness.
+implementation, build verification, authenticated API checks, order-status
+updates, and live notification connection are complete. Production readiness
+remains.
 
 ### Phase 1 — Requirements analysis
 
@@ -105,7 +107,8 @@ readiness.
 1. Built the shared navigation, workspace identity, search, and notification affordances.
 2. Built summary metrics, stock movement visualization, reorder alerts, and recent orders.
 3. Added API-backed product search/filtering, an empty state, a details view, and create/edit/archive flows.
-4. Added order creation and status filtering, plus an admin-only team view.
+4. Added order creation/status updates, an admin-only team view, and
+   authenticated stock/order event listeners.
 5. Applied responsive, keyboard-focus, reduced-motion, and form-validation behavior.
 6. Moved the misplaced `project/server/sockets/` directory beneath `project/server/src/`.
 
@@ -124,18 +127,17 @@ Manual smoke-check: sign in, open dashboard/products/orders/team, and verify
 empty states. Product and order write flows need seeded development records
 before they can be exercised safely.
 
-**Exit output:** Client `pnpm lint` and `pnpm build` pass. The local browser
-check verified admin sign-in and loaded dashboard, products, orders, and team
-views. The API health check returned HTTP 200. The database currently has no
-products or orders, so product/order write flows could not be exercised without
-adding real records.
+**Exit output:** Client `pnpm lint` and `pnpm build` pass. Server tests pass.
+The local browser verified admin sign-in, all list views, and an authenticated
+Socket.IO connection. The API health check returned HTTP 200. The database has
+no products or orders, so live event delivery and write flows were not tested
+with real records.
 
 ### Phase 5 — Integration, deployment, and maintenance
 
 Remaining integration and deployment work:
 
-1. Connect the authenticated Socket.IO client and replace the disconnected notification panel.
-2. Define deployment, TLS, backups, recovery, and monitoring procedures.
+1. Define deployment, TLS, backups, recovery, and monitoring procedures.
 
 ## Screen and behavior traceability
 
@@ -147,7 +149,7 @@ Remaining integration and deployment work:
 | Product details and stock status | Detail dialog with API values | Role-gated editing is also enforced by the server |
 | User roles and active states | Admin-only API-backed team view | Role changes are not in the UI |
 | Login and registration | Cookie-session login/registration | Initial admin is bootstrapped from the server CLI |
-| Low-stock/order notifications | Notification panel with explicit disconnected state | Socket.IO client integration remains |
+| Low-stock/order notifications | Authenticated live stock/order event panel | In-memory only; no replay of events missed while offline |
 | Stock history | Dashboard chart aggregated from movement API | Restricted to inventory managers and admins |
 
 ## Client module map

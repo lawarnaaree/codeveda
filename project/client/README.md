@@ -47,8 +47,9 @@ silently substitute demo records.
 - NPR formatting for monetary values
 
 Admins and inventory managers can mark Processing orders as Shipped. The
-server has Socket.IO support, but live notification listeners are not yet
-connected. User-role editing is not available in the interface.
+authenticated notification panel receives stock and order events while
+connected; it does not persist or replay missed events. User-role editing is
+not available in the interface.
 
 ## Validate
 

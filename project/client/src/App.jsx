@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import Sidebar from './components/Sidebar.jsx'
 import Topbar from './components/Topbar.jsx'
+import NotificationPanel from './features/notifications/NotificationPanel.jsx'
 import { apiRequest } from './services/api.js'
 import { fetchWorkspaceData, mapProduct } from './services/inventoryApi.js'
+import { connectNotificationSocket } from './services/notificationSocket.js'
 import AuthPage from './features/auth/AuthPage.jsx'
 import Dashboard from './features/dashboard/Dashboard.jsx'
 import Orders from './features/orders/Orders.jsx'
@@ -39,10 +41,52 @@ function App() {
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [isCreatingProduct, setIsCreatingProduct] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
+  const [notifications, setNotifications] = useState([])
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
+  const [socketConnection, setSocketConnection] = useState({ userId: '', status: 'disconnected' })
   const canManageInventory = user?.role === 'admin' || user?.role === 'inventory_manager'
   const canViewTeam = user?.role === 'admin'
+  const userId = user?.id
   const dataKey = user ? `${user.id}:${user.role}:${refreshVersion}` : ''
   const isLoadingData = Boolean(user) && loadedDataKey !== dataKey && failedDataKey !== dataKey
+  const connectionStatus = !userId
+    ? 'disconnected'
+    : socketConnection.userId === userId
+      ? socketConnection.status
+      : 'connecting'
+
+  useEffect(() => {
+    if (!userId) return undefined
+
+    const socket = connectNotificationSocket()
+    const recordNotification = (type, title, message) => {
+      const notification = {
+        id: `${Date.now()}-${Math.random()}`,
+        type,
+        title,
+        message,
+        createdAt: new Date().toISOString(),
+      }
+
+      setNotifications((current) => [notification, ...current].slice(0, 20))
+      setUnreadNotificationCount((current) => Math.min(current + 1, 20))
+    }
+
+    socket.on('connect', () => setSocketConnection({ userId, status: 'connected' }))
+    socket.on('disconnect', () => setSocketConnection({ userId, status: 'disconnected' }))
+    socket.on('connect_error', () => setSocketConnection({ userId, status: 'disconnected' }))
+    socket.on('stock:changed', ({ productId, quantity }) => {
+      recordNotification('stock', 'Stock changed', `Product #${productId} now has ${quantity} units`)
+    })
+    socket.on('order:created', ({ orderId }) => {
+      recordNotification('order', 'Order created', `Order #${orderId} is processing`)
+    })
+    socket.on('order:status-changed', ({ orderId, status }) => {
+      recordNotification('shipped', `Order #${orderId} updated`, `Status changed to ${status}`)
+    })
+
+    return () => socket.disconnect()
+  }, [userId])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -113,6 +157,8 @@ function App() {
       setActivePage('dashboard')
       setSessionError('')
       setDataError('')
+      setNotifications([])
+      setUnreadNotificationCount(0)
     } catch (error) {
       setDataError(error.message)
     }
@@ -252,8 +298,12 @@ function App() {
           search={search}
           onSearch={handleSearch}
           isNotificationsOpen={isNotificationsOpen}
+          notificationCount={unreadNotificationCount}
           onLogout={logout}
-          onToggleNotifications={() => setIsNotificationsOpen((open) => !open)}
+          onToggleNotifications={() => {
+            if (!isNotificationsOpen) setUnreadNotificationCount(0)
+            setIsNotificationsOpen((open) => !open)
+          }}
         />
         <main className="page-content">
           {dataError && (
@@ -278,29 +328,11 @@ function App() {
       </div>
 
       {isNotificationsOpen && (
-        <div className="notification-backdrop" onClick={() => setIsNotificationsOpen(false)}>
-          <section
-            aria-label="Notifications"
-            className="notification-panel"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="notification-panel__header">
-              <div>
-                <h2>Notifications</h2>
-                <p>Stock and order updates</p>
-              </div>
-              <button
-                aria-label="Close notifications"
-                className="icon-button"
-                onClick={() => setIsNotificationsOpen(false)}
-                type="button"
-              >
-                ×
-              </button>
-            </div>
-            <p className="notification-empty">Live notifications are not connected yet.</p>
-          </section>
-        </div>
+        <NotificationPanel
+          connectionStatus={connectionStatus}
+          notifications={notifications}
+          onClose={() => setIsNotificationsOpen(false)}
+        />
       )}
 
       {(selectedProduct || isCreatingProduct) && (

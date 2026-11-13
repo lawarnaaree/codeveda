@@ -14,9 +14,10 @@ source of truth for table changes.
 The backend includes PostgreSQL migrations, authentication, product, order,
 stock-movement, and user APIs, plus authenticated Socket.IO events. The React
 client uses the cookie-session API for login, product and order data, inventory
-updates, stock history, and admin user listing. Live Socket.IO notifications
-are not yet wired into the interface. New orders can be created from the client,
-and admins or inventory managers can mark Processing orders as Shipped.
+updates, stock history, admin user listing, and authenticated Socket.IO
+notifications. New orders can be created from the client, and admins or
+inventory managers can mark Processing orders as Shipped. Notifications are
+transient and are not replayed after disconnect.
 
 The intended request path is:
 
@@ -708,10 +709,10 @@ used for a direct API origin; it must never contain a secret.
 
 Product catalog operations, order creation and listing, admin team listing,
 dashboard summaries, and role-based stock movement visibility now use the API.
-Prices are displayed as Nepalese rupees (NPR). To finish the client workflow,
-status updates allow only `Processing` to `Shipped` and are restricted to
-admins and inventory managers. Connect an authenticated Socket.IO client for
-notifications. Show loading, empty, and error states explicitly; never
+Prices are displayed as Nepalese rupees (NPR). Status updates allow only
+`Processing` to `Shipped` and are restricted to admins and inventory managers.
+The authenticated Socket.IO client listens for stock and order changes. Show
+loading, empty, and error states explicitly; never
 silently replace failed server data with demo records.
 
 ## 12. Recommended implementation order
@@ -729,13 +730,13 @@ Complete and test each step before moving to the next:
 | 7. Implement stock history | Persist signed changes with actor and reason | Implemented transactionally |
 | 8. Implement orders | Compute totals and update order, inventory, and movements atomically | Implemented transactionally |
 | 9. Connect React | Login/session, products, orders, stock, and team views | Admin sign-in and all list screens verified; product/order lists are empty |
-| 10. Add Socket.IO client | Authenticate sockets and publish post-commit events | Server is implemented; client listeners remain |
+| 10. Add Socket.IO client | Authenticate sockets and publish post-commit events | Authenticated client listeners implemented; events are transient |
 | 11. Finish order workflows | Create orders and update allowed statuses from the UI | Create and `Processing` to `Shipped` implemented |
 | 12. Verify and deploy | Test, configure production secrets/TLS, backups, and recovery | Remaining |
 
-The next step is to connect the authenticated Socket.IO client for live
-notifications, then prepare deployment, TLS, backups, recovery, and monitoring.
-Avoid production changes without a reviewed plan and backup.
+The next step is production readiness: deployment configuration, TLS,
+backups, recovery, and monitoring. Avoid production changes without a reviewed
+plan and backup.
 
 ## Further reading
 

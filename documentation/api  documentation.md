@@ -107,9 +107,26 @@ Nepalese rupees (NPR); the client formats them with the `en-NP` locale.
 Login creates the `HttpOnly` `stockroom.sid` cookie; logout destroys the
 server-side session. Browser requests must send cookies (for `fetch`, use
 `credentials: "include"`). CORS allows only the configured `CLIENT_ORIGIN`.
+Socket.IO connections use the same session cookie; the server rejects missing
+sessions and inactive accounts.
 All `POST`, `PUT`, `PATCH`, and `DELETE` requests must include an exact matching
 `Origin` header.
 
 Validation errors return `422`, unauthenticated requests return `401`, and
 insufficient stock or other business conflicts return `409`. Authentication
 and registration requests are rate limited.
+
+## Socket.IO events
+
+The authenticated client can receive these events after the corresponding
+database transaction commits:
+
+| Event | Payload |
+| --- | --- |
+| `stock:changed` | `{ "productId": "12", "quantity": 27 }` |
+| `order:created` | `{ "orderId": "31" }` |
+| `order:status-changed` | `{ "orderId": "31", "status": "Shipped" }` |
+
+Events are broadcast to connected authenticated clients. They are not stored
+or replayed after a disconnect; the client displays only events received in
+the current session.
