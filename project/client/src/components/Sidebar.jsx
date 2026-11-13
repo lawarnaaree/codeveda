@@ -7,7 +7,20 @@ const navigation = [
   { id: 'team', label: 'Team', icon: Users },
 ]
 
-function Sidebar({ activePage, onNavigate }) {
+function Sidebar({ activePage, onNavigate, orderCount, user }) {
+  const isAdmin = user.role === 'admin'
+  const roleLabels = {
+    admin: 'Administrator',
+    inventory_manager: 'Inventory manager',
+    warehouse_staff: 'Warehouse staff',
+  }
+  const initials = user.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+
   return (
     <aside className="sidebar">
       <button aria-label="Stockroom home" className="brand" onClick={() => onNavigate('dashboard')} type="button">
@@ -20,7 +33,7 @@ function Sidebar({ activePage, onNavigate }) {
       <div className="sidebar__section">
         <p className="sidebar__label">Workspace</p>
         <nav aria-label="Main navigation" className="nav-list">
-          {navigation.map(({ id, label, icon: Icon }) => (
+          {navigation.filter(({ id }) => id !== 'team' || isAdmin).map(({ id, label, icon: Icon }) => (
             <button
               aria-current={activePage === id ? 'page' : undefined}
               className={`nav-item${activePage === id ? ' nav-item--active' : ''}`}
@@ -30,7 +43,7 @@ function Sidebar({ activePage, onNavigate }) {
             >
               <Icon aria-hidden="true" size={18} strokeWidth={1.7} />
               <span>{label}</span>
-              {id === 'orders' && <span className="nav-item__count">4</span>}
+              {id === 'orders' && orderCount > 0 && <span className="nav-item__count">{orderCount}</span>}
             </button>
           ))}
         </nav>
@@ -38,18 +51,18 @@ function Sidebar({ activePage, onNavigate }) {
 
       <div className="sidebar__bottom">
         <div className="workspace-card">
-          <span aria-hidden="true" className="workspace-card__avatar">N</span>
+          <span aria-hidden="true" className="workspace-card__avatar">S</span>
           <span className="workspace-card__copy">
-            <strong>Northwind Goods</strong>
+            <strong>Stockroom</strong>
             <span>Operations workspace</span>
           </span>
           <span aria-hidden="true" className="workspace-card__status" />
         </div>
         <div className="profile-button">
-          <span aria-hidden="true" className="profile-button__avatar">AM</span>
+          <span aria-hidden="true" className="profile-button__avatar">{initials}</span>
           <span className="profile-button__copy">
-            <strong>Alex Morgan</strong>
-            <span>Administrator</span>
+            <strong>{user.name}</strong>
+            <span>{roleLabels[user.role] || user.role}</span>
           </span>
         </div>
       </div>

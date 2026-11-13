@@ -2,30 +2,21 @@
 
 ## Documentation review
 
-The existing project notes were reviewed before implementation. They describe an inventory and order-management application, but do not yet define the API payloads, authentication response, or final session strategy.
+The project notes were reviewed before implementation. The API and database contracts have since been completed in the PostgreSQL backend and API documentation.
 
 ### System architecture
 
 [`system architecture.md`](./system%20architecture.md) describes a React browser client calling a Node.js/Express JSON API. The server owns authentication, authorization, validation, and business logic; PostgreSQL is accessed through the `pg` driver. Socket.IO is the intended channel for real-time updates.
 
-**Implementation consequence:** the client is structured as a Vite/React application and keeps its present data in a clearly named demo-data module. It does not pretend to be connected to an API or live socket server that is not present in the workspace.
+**Implementation consequence:** the Vite/React client uses the Express JSON API for authentication and operational data. Socket.IO events are supported by the server but are not yet subscribed to by the client.
 
 ### API documentation
 
-[`api  documentation.md`](./api%20%20documentation.md) lists these routes and access expectations:
-
-| Method and route | Purpose and access in the source note | Frontend status |
-| --- | --- | --- |
-| `POST /api/auth/register` | Public registration, with role restrictions | Not wired: registration fields and response are unspecified |
-| `POST /api/auth/login` | Public authentication | Not wired: token/session contract is unspecified |
-| `GET /api/products` | Authenticated product list and search | Demonstrated with local sample records |
-| `POST /api/products` | Product creation by an administrator or permitted staff | Product form is local-only |
-| `PATCH /api/products/:id` | Product updates by an administrator or permitted staff | Edit form is local-only |
-| `GET /api/orders` | Authenticated order list | Demonstrated with local sample records |
-| `POST /api/orders` | Authenticated order creation | No order-creation flow is specified |
-| `GET /api/stock-movements` | Role-controlled stock history | Summary chart is local sample data |
-
-No request or response body shapes, error schema, pagination format, or token/session transport are specified in that note. Those contracts need to be agreed with the server before API wiring.
+[`api  documentation.md`](./api%20%20documentation.md) defines the routes,
+validation, response/error shapes, cookie session, and role permissions used by
+the client. Login, registration, session restore, products, order listing,
+stock history, and admin user listing are wired. Order creation/status editing
+and realtime notifications are not yet available in the interface.
 
 ### Database design
 
@@ -37,7 +28,12 @@ records, including separate order-item rows:
 - **Orders:** items, customer, total, status, creator, and creation time
 - **Stock movements:** product, quantity change, reason, actor, and creation time
 
-**Implementation consequence:** sample product details use the documented product fields. Passwords and user authentication data are not represented in the browser demo.
+**Implementation consequence:** API product fields are mapped into the client
+view model. Passwords are never returned to the browser; credentials are sent
+only during login and registration over the configured API.
+
+All monetary amounts are stored and returned as decimal strings and are
+displayed as Nepalese rupees (NPR) using the `en-NP` locale.
 
 **Database decision update:** PostgreSQL is the selected database instead of MongoDB. The relational tables and implementation sequence are documented in [the PostgreSQL backend guide](./backend%20and%20PostgreSQL%20implementation%20guide.md).
 
@@ -53,7 +49,10 @@ records, including separate order-item rows:
 6. User administration with roles, permissions, and active/inactive states
 7. Notifications for low stock, order changes, and real-time updates
 
-The current frontend implements the dashboard, searchable and filterable product catalog, product detail/edit/create dialog, order list/status filter, team and role overview, and a notification panel. Login/registration and server-backed user administration are held until their security and API contracts are defined. Notifications and operational records are sample data; they are not live.
+The frontend implements login/registration, authenticated dashboard data,
+searchable products, product create/edit/archive, order listing/filtering,
+admin team listing, and role-aware stock history. Notifications are clearly
+marked as not connected until the Socket.IO client is added.
 
 ### Initial UI audit and design direction
 
@@ -67,13 +66,18 @@ The starter `App.jsx` rendered only the word `App`; the CSS files only reset mar
 
 ### Security and design decisions
 
-[`security and design decisions.md`](./security%20and%20design%20decisions.md) identifies password hashing and session/token strategy, server-side authorization, validation and rate limits, CORS and secure headers, secret management, backups, and project risks as decisions to resolve.
+[`security and design decisions.md`](./security%20and%20design%20decisions.md) records the implemented password hashing, session, authorization, validation, rate-limit, CORS, and secret-management decisions, plus production tasks.
 
-**Implementation consequence:** secrets and credentials are not stored in the client. A visual team role overview is not an authorization boundary. Server enforcement, authentication, and production persistence remain server responsibilities.
+**Implementation consequence:** secrets and credentials are not stored in the
+client. UI role gating is only for usability; server authorization remains the
+security boundary.
 
 ## Waterfall delivery record
 
-The work follows the sequential Waterfall phases. Each phase has a reviewable output; later integration is gated on the open contracts above.
+The work follows the sequential Waterfall phases. Requirements, design,
+implementation, and build verification are complete; API integration is in
+progress and production readiness remains gated on database migration and
+deployment decisions.
 
 ### Phase 1 — Requirements analysis
 
@@ -89,7 +93,7 @@ The work follows the sequential Waterfall phases. Each phase has a reviewable ou
 1. Chose a practical, measured interface for operations staff.
 2. Used warm-tinted neutral surfaces and the requested `hsl(32 99% 50%)` orange primary. Its darker, soft, and wash tints carry emphasis, alert surfaces, and chart area; dark text stays on the bright primary for contrast. Green remains reserved for positive stock/order status.
 3. Made stock movement the primary visual moment and reorder thresholds the product-specific signature.
-4. Split the client into shared shell, reusable components, sample data, and screen-level feature folders.
+4. Split the client into shared shell, reusable components, API services, and screen-level feature folders.
 5. Kept the first landing view on the operational dashboard; mobile layouts stack the chart and stock list and keep tables scrollable.
 
 **Exit output:** the UI direction, navigation model, and module boundaries implemented in `project/client/src/`.
@@ -98,12 +102,12 @@ The work follows the sequential Waterfall phases. Each phase has a reviewable ou
 
 1. Built the shared navigation, workspace identity, search, and notification affordances.
 2. Built summary metrics, stock movement visualization, reorder alerts, and recent orders.
-3. Added product search/filtering, an empty state, a details view, and local create/update/delete flows.
+3. Added API-backed product search/filtering, an empty state, a details view, and create/edit/archive flows.
 4. Added order status filtering and a role/status team overview.
 5. Applied responsive, keyboard-focus, reduced-motion, and form-validation behavior.
 6. Moved the misplaced `project/server/sockets/` directory beneath `project/server/src/`.
 
-**Exit output:** the client prototype and a conventional server source layout. Server behavior itself is not implemented by this task.
+**Exit output:** the React client and the modular Express/PostgreSQL backend.
 
 ### Phase 4 — Verification
 
@@ -116,49 +120,55 @@ pnpm build
 
 Manual smoke-check: open the dashboard, navigate each screen, search and filter products/orders, create, edit, and delete a product, inspect the notification panel, and verify the layout at desktop and mobile widths.
 
-**Exit output:** `pnpm lint` and `pnpm build` pass. Local browser checks cover dashboard rendering, product search, create/edit/delete flows, order/team views, notifications, and a 390px mobile layout. Browser checks use only demo data.
+**Exit output:** Client `pnpm lint` and `pnpm build` pass. The local browser
+smoke check confirms the sign-in and registration screens, and `/api/health`
+returns HTTP 200. Authenticated CRUD verification still requires applied
+migrations and a development admin account.
 
 ### Phase 5 — Integration, deployment, and maintenance
 
-This phase is intentionally gated. Before production use:
+Remaining integration and deployment work:
 
-1. Define and document the API request/response and error contracts.
-2. Decide the authentication/session mechanism and implement login/registration accordingly.
-3. Connect the API, expose configuration through non-secret public client settings, and handle authorization failures.
-4. Add server-backed order, team, stock-movement, and notification flows, including Socket.IO lifecycle/error handling.
-5. Validate permissions and security on the server, then run end-to-end tests against a development API.
-6. Define deployment, backup, recovery, and monitoring procedures.
+1. Apply the migration to the confirmed development database and create an initial admin.
+2. Verify browser login, permissions, product mutations, and database-backed lists against that database.
+3. Add order creation/status workflows to the client if required.
+4. Add the authenticated Socket.IO client and replace the disconnected notification panel.
+5. Define deployment, TLS, backups, recovery, and monitoring procedures.
 
 ## Screen and behavior traceability
 
 | Documented requirement | Implemented view/behavior | Current limitation |
 | --- | --- | --- |
-| Stock summary and low-stock alerts | Overview metrics and reorder list | Demo data, no server sync |
-| Recent activity/orders | Recent orders table and orders view | Sample records; no order creation endpoint contract |
-| Product search, filter, CRUD | Search, low-stock filter, create/read/edit/delete, empty state | In-memory only; server persistence is not included |
-| Product details and stock status | Detail dialog with documented fields | Local sample values |
-| User roles and active states | Team view with role/status labels | Read-only sample roster |
-| Login and registration | Not implemented | Session strategy and response schema are unresolved |
-| Low-stock/order notifications | Notification panel | Static sample notifications; no socket connection |
-| Stock history | Summary chart | Sample series; detailed history endpoint is not wired |
+| Stock summary and low-stock alerts | Overview metrics and reorder list | Requires migrated development database for browser validation |
+| Recent activity/orders | Recent orders table and orders view | Order creation and status editing are not in the UI |
+| Product search, filter, CRUD | API-backed search, low-stock filter, create/edit/archive | Requires migrated development database for browser validation |
+| Product details and stock status | Detail dialog with API values | Role-gated editing is also enforced by the server |
+| User roles and active states | Admin-only API-backed team view | Role changes are not in the UI |
+| Login and registration | Cookie-session login/registration | Initial admin is bootstrapped from the server CLI |
+| Low-stock/order notifications | Notification panel with explicit disconnected state | Socket.IO client integration remains |
+| Stock history | Dashboard chart aggregated from movement API | Restricted to inventory managers and admins |
 
 ## Client module map
 
 ```text
 project/client/src/
   components/       shared sidebar, top bar, and status badge
-  data/             sample inventory, orders, team, and formatting helpers
+  data/             NPR formatting and stock-status helpers
   features/
+    auth/           login and registration
     dashboard/      overview metrics and stock movement
     orders/         order listing and status filter
     products/       catalog and product dialog
     team/             workspace roles and member states
   styles/           application layout and responsive styles
-  App.jsx           navigation and shared application state
+  services/         cookie-aware API and response mapping
+  App.jsx           session, navigation, and shared workspace state
   index.css         global tokens, resets, and focus styles
   main.jsx          React entry point
 ```
 
 ## Server structure review
 
-The supplied server tree contained `config`, `controllers`, `middlewares`, `models`, `routes`, and `services` below `src`, but `sockets` was a sibling of `src`. The Socket.IO code boundary belongs with the application source, so `sockets/` was moved to `src/sockets/` (including its `utils/` child). The server folders contain no implementation files yet; this change corrects placement without inventing server modules.
+The server uses `config`, `controllers`, `middlewares`, `models`, `routes`,
+`services`, `scripts`, `validators`, and `sockets` under `src`, with SQL
+migrations in `project/server/migrations/`.

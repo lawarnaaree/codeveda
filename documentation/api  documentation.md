@@ -86,7 +86,8 @@ Paginated responses have this shape:
 ```
 
 Database `BIGINT` identifiers and `NUMERIC` prices/totals are returned as
-strings to preserve precision.
+strings to preserve precision. All prices and totals are denominated in
+Nepalese rupees (NPR); the client formats them with the `en-NP` locale.
 
 ## Sessions and browser requests
 

@@ -2,7 +2,7 @@
 
 This guide documents the implemented Stockroom PostgreSQL backend and explains
 local database setup, the Express connection, relational tables, MVC
-responsibilities, and the remaining work to connect the React client.
+responsibilities, and the React client's authenticated API integration.
 
 ## 1. The selected database approach
 
@@ -11,10 +11,11 @@ parameterized SQL directly rather than Mongoose or a second ORM, so you can
 learn the relational schema and queries explicitly. SQL migrations are the
 source of truth for table changes.
 
-The backend now includes PostgreSQL migrations, authentication, product,
-order, stock-movement, and user APIs, plus authenticated Socket.IO events. The
-React client still uses local demo data and has not yet been connected to these
-endpoints.
+The backend includes PostgreSQL migrations, authentication, product, order,
+stock-movement, and user APIs, plus authenticated Socket.IO events. The React
+client uses the cookie-session API for login, product and order data, inventory
+updates, stock history, and admin user listing. Live Socket.IO notifications
+and order creation/status editing are not yet wired into the interface.
 
 The intended request path is:
 
@@ -439,7 +440,8 @@ as well:
 5. Add product business rules in a service.
 6. Add controller and route.
 7. Test valid input, invalid input, duplicates, and database failures.
-8. Replace the client demo data with API responses.
+8. Verify the API-backed client flows and confirm monetary values display in
+   Nepalese rupees (NPR).
 
 ### Parameterized product query
 
@@ -672,8 +674,9 @@ The script refuses to create another admin after one exists.
 
 ## 11. Connect the React client
 
-The current Vite client runs on port `5173`; the Express example runs on
-`3000`. Add a development proxy in `project/client/vite.config.js`:
+The Vite client runs on port `5173`; the Express server defaults to `3000`.
+`project/client/vite.config.js` proxies `/api` and `/socket.io` to the server
+so browser requests retain the configured client origin:
 
 ```js
 import react from '@vitejs/plugin-react'
@@ -696,36 +699,18 @@ export default defineConfig({
 })
 ```
 
-The client has not yet been wired to the API. When connecting it, create
-`project/client/src/services/api.js`:
+`project/client/src/services/api.js` sends credentialed requests and reads the
+standard `{ data }` and `{ error }` response shapes. The client includes a
+login/registration screen, loads paginated data, and shows request errors
+instead of silently falling back to demo values. `VITE_API_BASE_URL` may be
+used for a direct API origin; it must never contain a secret.
 
-```js
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
-
-export async function apiRequest(path, { method = 'GET', body } = {}) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    credentials: 'include',
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
-
-  const isJson = response.headers.get('content-type')?.includes('application/json')
-  const payload = isJson ? await response.json() : null
-
-  if (!response.ok) {
-    throw new Error(payload?.error?.message || `Request failed (${response.status})`)
-  }
-
-  return payload?.data ?? payload
-}
-```
-
-Add the `/api` and `/socket.io` development proxies to
-`project/client/vite.config.js`, then replace demo data one feature at a time:
-products first, then orders, then stock movements. Show loading, empty, and
-error states explicitly. Do not silently fall back to demo values when a
-database request fails.
+Product catalog operations, order listing, admin team listing, dashboard
+summaries, and role-based stock movement visibility now use the API. Prices
+are displayed as Nepalese rupees (NPR). To finish the client workflow, add
+order creation/status editing and connect an authenticated Socket.IO client
+for notifications. Show loading, empty, and error states explicitly; never
+silently replace failed server data with demo records.
 
 ## 12. Recommended implementation order
 
@@ -737,20 +722,21 @@ Complete and test each step before moving to the next:
 | --- | --- | --- |
 | 1. Confirm contracts | Roles, order/customer shape, statuses, response format, and archive behavior | Done and reflected in the API and database documentation |
 | 2. Initialize server | ESM package, dependencies, scripts, `.gitignore`, and `.env.example` | Done |
-| 3. Connect database | Validate config, shared pool, health check | Implemented; verify with a confirmed local database |
-| 4. Create migrations | Users, products, orders, items, and stock movements | Migration is implemented; applying it locally remains |
+| 3. Connect database | Validate config, shared pool, health check | Verified with the configured database; health endpoint returned HTTP 200 |
+| 4. Create migrations | Users, products, orders, items, and stock movements | Implemented; apply to the confirmed development database |
 | 5. Implement product API | Queries, validation, service, controller, routes, and tests | Implemented |
 | 6. Implement authentication | Password hashing, sessions, authorization, and rate limits | Implemented |
 | 7. Implement stock history | Persist signed changes with actor and reason | Implemented transactionally |
 | 8. Implement orders | Compute totals and update order, inventory, and movements atomically | Implemented transactionally |
-| 9. Connect React | Replace demo data and show loading/error states | Remaining |
-| 10. Add Socket.IO | Authenticate sockets and publish post-commit events | Implemented; connect client listeners as needed |
-| 11. Verify and deploy | Run database-backed tests, configure secrets/TLS, backups, and recovery | Remaining |
+| 9. Connect React | Login/session, products, orders, stock, and team views | Implemented; end-to-end verification needs migrated tables and a test account |
+| 10. Add Socket.IO client | Authenticate sockets and publish post-commit events | Server is implemented; client listeners remain |
+| 11. Finish order workflows | Create orders and update allowed statuses from the UI | Remaining; API currently lists and creates orders only |
+| 12. Verify and deploy | Test, configure production secrets/TLS, backups, and recovery | Remaining |
 
-The next development step is to connect the React product screens to the
-implemented API, then add order and stock-movement integration. Before running
-migrations or database-backed checks, verify that `DATABASE_URL` points to a
-disposable or confirmed development database.
+Next, apply the numbered migration to the confirmed development database,
+create the initial admin, and run browser/API checks with that account. Do not
+run migrations against a production or unknown database without explicit
+confirmation and a backup.
 
 ## Further reading
 

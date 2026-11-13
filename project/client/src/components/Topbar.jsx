@@ -1,4 +1,4 @@
-import { Bell, Search } from 'lucide-react'
+import { Bell, LogOut, Search } from 'lucide-react'
 
 function Topbar({
   pageTitle,
@@ -6,12 +6,12 @@ function Topbar({
   onSearch,
   isNotificationsOpen,
   onToggleNotifications,
-  hasUnreadNotifications,
+  onLogout,
 }) {
   return (
     <header className="topbar">
       <div aria-label="Breadcrumb" className="topbar__breadcrumb">
-        <span>Northwind Goods</span>
+        <span>Stockroom</span>
         <span aria-hidden="true" className="topbar__separator">/</span>
         <strong>{pageTitle}</strong>
       </div>
@@ -34,7 +34,10 @@ function Topbar({
           type="button"
         >
           <Bell aria-hidden="true" size={18} strokeWidth={1.7} />
-          {hasUnreadNotifications && <span className="notification-button__dot" />}
+        </button>
+        <button className="button button--secondary topbar__logout" onClick={onLogout} type="button">
+          <LogOut aria-hidden="true" size={15} />
+          Sign out
         </button>
       </div>
     </header>

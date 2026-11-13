@@ -1,7 +1,7 @@
 import { Boxes, CircleAlert, PackageCheck, ShoppingCart } from 'lucide-react'
 import { useMemo } from 'react'
 import StatusBadge from '../../components/StatusBadge.jsx'
-import { formatCurrency, getProductStatus, recentOrders, stockMovement } from '../../data/inventory.js'
+import { formatCurrency, getProductStatus } from '../../data/inventory.js'
 
 const chartWidth = 640
 const chartHeight = 210
@@ -10,9 +10,9 @@ const chartPadding = { top: 18, right: 18, bottom: 30, left: 36 }
 function buildLine(values) {
   const plotWidth = chartWidth - chartPadding.left - chartPadding.right
   const plotHeight = chartHeight - chartPadding.top - chartPadding.bottom
-  const max = 90
+  const max = Math.max(10, ...values) * 1.1
   const points = values.map((value, index) => {
-    const x = chartPadding.left + (plotWidth / (values.length - 1)) * index
+    const x = chartPadding.left + (plotWidth / Math.max(values.length - 1, 1)) * index
     const y = chartPadding.top + plotHeight - (value / max) * plotHeight
     return [x, y]
   })
@@ -20,37 +20,50 @@ function buildLine(values) {
   return points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x} ${y}`).join(' ')
 }
 
-function Dashboard({ products, onNavigate, onSelectProduct }) {
+function toCents(amount) {
+  const [whole, fraction = ''] = String(amount).split('.')
+  const cents = `${fraction}00`.slice(0, 2)
+  return BigInt(whole || '0') * 100n + BigInt(cents || '0')
+}
+
+function Dashboard({ canViewStock, orders, products, stockMovement, onNavigate, onSelectProduct }) {
   const totals = useMemo(() => {
     const units = products.reduce((sum, product) => sum + Number(product.quantity || 0), 0)
-    const value = products.reduce(
-      (sum, product) => sum + Number(product.quantity || 0) * Number(product.price || 0),
-      0,
+    const valueCents = products.reduce(
+      (sum, product) => sum + toCents(product.price) * BigInt(product.quantity),
+      0n,
     )
     const lowStock = products.filter((product) => getProductStatus(product) === 'Low stock').length
 
-    return { units, value, lowStock }
+    return {
+      units,
+      value: `${valueCents / 100n}.${String(valueCents % 100n).padStart(2, '0')}`,
+      lowStock,
+    }
   }, [products])
   const lowStockProducts = products
     .filter((product) => getProductStatus(product) === 'Low stock')
     .slice(0, 3)
-  const openOrders = recentOrders.filter((order) => order.status !== 'Shipped').length
-  const receivedPath = buildLine(stockMovement.map((item) => item.received))
-  const shippedPath = buildLine(stockMovement.map((item) => item.shipped))
-  const receivedArea = `${receivedPath} L ${chartWidth - chartPadding.right} ${chartHeight - chartPadding.bottom} L ${chartPadding.left} ${chartHeight - chartPadding.bottom} Z`
+  const openOrders = orders.filter((order) => order.status !== 'Shipped').length
+  const addedPath = buildLine(stockMovement.map((item) => item.added))
+  const removedPath = buildLine(stockMovement.map((item) => item.removed))
+  const addedArea = `${addedPath} L ${chartWidth - chartPadding.right} ${chartHeight - chartPadding.bottom} L ${chartPadding.left} ${chartHeight - chartPadding.bottom} Z`
+  const currentDate = new Intl.DateTimeFormat('en-NP', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date())
 
   return (
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <p className="eyebrow">Friday, November 13, 2026</p>
+          <p className="eyebrow">{currentDate}</p>
           <h1>Inventory overview</h1>
           <p className="page-heading__description">A clear view of stock, orders, and the work ahead</p>
         </div>
-        <span className="data-note">
-          <span className="demo-dot" />
-          Sample data
-        </span>
+        <span className="data-note">Live inventory</span>
       </section>
 
       <section aria-label="Inventory summary" className="metric-grid">
@@ -59,13 +72,12 @@ function Dashboard({ products, onNavigate, onSelectProduct }) {
             <span className="metric-card__label">Units on hand</span>
             <Boxes aria-hidden="true" size={17} strokeWidth={1.7} />
           </div>
-          <strong className="metric-card__value">{totals.units.toLocaleString('en-US')}</strong>
+          <strong className="metric-card__value">{totals.units.toLocaleString('en-NP')}</strong>
           <span className="metric-card__note metric-card__note--quiet">Across {products.length} products</span>
         </article>
         <article className="metric-card">
           <div className="metric-card__top">
             <span className="metric-card__label">Stock value</span>
-            <span aria-hidden="true" className="metric-card__currency">$</span>
           </div>
           <strong className="metric-card__value">{formatCurrency(totals.value)}</strong>
           <span className="metric-card__note metric-card__note--quiet">At current catalog prices</span>
@@ -93,40 +105,50 @@ function Dashboard({ products, onNavigate, onSelectProduct }) {
           <div className="panel-heading">
             <div>
               <h2>Stock movement</h2>
-              <p>Units received and shipped</p>
+              <p>Daily units added and removed</p>
             </div>
             <span className="chart-period">Last 7 days</span>
           </div>
-          <div className="chart-legend">
-            <span><i className="legend-dot legend-dot--received" /> Received</span>
-            <span><i className="legend-dot legend-dot--shipped" /> Shipped</span>
-            <span className="chart-legend__period">Units</span>
-          </div>
-          <div className="chart-wrap">
-            <svg
-              aria-label="Stock received and shipped during the last seven days"
-              className="movement-chart"
-              preserveAspectRatio="none"
-              role="img"
-              viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-            >
-              {[0, 1, 2, 3].map((line) => {
-                const y = chartPadding.top + ((chartHeight - chartPadding.top - chartPadding.bottom) / 3) * line
-                return <line className="chart-gridline" key={line} x1={chartPadding.left} x2={chartWidth - chartPadding.right} y1={y} y2={y} />
-              })}
-              <path className="chart-area" d={receivedArea} />
-              <path className="chart-line chart-line--received" d={receivedPath} />
-              <path className="chart-line chart-line--shipped" d={shippedPath} />
-              {stockMovement.map((item, index) => {
-                const x = chartPadding.left + ((chartWidth - chartPadding.left - chartPadding.right) / 6) * index
-                return (
-                  <text className="chart-label" key={item.day} textAnchor="middle" x={x} y={chartHeight - 4}>
-                    {item.day}
-                  </text>
-                )
-              })}
-            </svg>
-          </div>
+          {canViewStock ? (
+            <>
+              <div className="chart-legend">
+                <span><i className="legend-dot legend-dot--added" /> Added</span>
+                <span><i className="legend-dot legend-dot--removed" /> Removed</span>
+                <span className="chart-legend__period">Units</span>
+              </div>
+              {stockMovement.some((item) => item.added || item.removed) ? (
+                <div className="chart-wrap">
+                  <svg
+                    aria-label="Daily stock units added and removed during the last seven days"
+                    className="movement-chart"
+                    preserveAspectRatio="none"
+                    role="img"
+                    viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                  >
+                    {[0, 1, 2, 3].map((line) => {
+                      const y = chartPadding.top + ((chartHeight - chartPadding.top - chartPadding.bottom) / 3) * line
+                      return <line className="chart-gridline" key={line} x1={chartPadding.left} x2={chartWidth - chartPadding.right} y1={y} y2={y} />
+                    })}
+                    <path className="chart-area" d={addedArea} />
+                    <path className="chart-line chart-line--added" d={addedPath} />
+                    <path className="chart-line chart-line--removed" d={removedPath} />
+                    {stockMovement.map((item, index) => {
+                      const x = chartPadding.left + ((chartWidth - chartPadding.left - chartPadding.right) / 6) * index
+                      return (
+                        <text className="chart-label" key={item.day} textAnchor="middle" x={x} y={chartHeight - 4}>
+                          {item.day}
+                        </text>
+                      )
+                    })}
+                  </svg>
+                </div>
+              ) : (
+                <div className="empty-note"><p>No stock changes recorded in the last 7 days</p></div>
+              )}
+            </>
+          ) : (
+            <div className="empty-note"><p>Stock history is available to inventory managers and admins</p></div>
+          )}
         </article>
 
         <article className="panel low-stock-panel">
@@ -175,18 +197,19 @@ function Dashboard({ products, onNavigate, onSelectProduct }) {
               <tr><th>Order</th><th>Customer</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th></tr>
             </thead>
             <tbody>
-              {recentOrders.slice(0, 3).map((order) => (
+              {orders.slice(0, 3).map((order) => (
                 <tr key={order.id}>
                   <td className="table-primary">#{order.id}</td>
-                  <td>{order.customer}</td>
+                  <td>{order.customerName}</td>
                   <td>{order.date}</td>
-                  <td>{order.items}</td>
+                  <td>{order.itemCount}</td>
                   <td className="table-primary">{formatCurrency(order.total)}</td>
                   <td><StatusBadge tone={order.status === 'Shipped' ? 'positive' : order.status === 'Processing' ? 'info' : 'neutral'}>{order.status}</StatusBadge></td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {!orders.length && <div className="empty-state"><p>No orders yet</p></div>}
         </div>
       </section>
     </div>

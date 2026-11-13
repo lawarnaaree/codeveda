@@ -1,16 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
 import StatusBadge from '../../components/StatusBadge.jsx'
-import { formatCurrency, recentOrders } from '../../data/inventory.js'
+import { formatCurrency } from '../../data/inventory.js'
 
-function Orders() {
+function Orders({ orders }) {
   const [statusFilter, setStatusFilter] = useState('All orders')
   const [query, setQuery] = useState('')
-  const orders = useMemo(() => recentOrders.filter((order) => {
+  const filteredOrders = useMemo(() => orders.filter((order) => {
     const matchesStatus = statusFilter === 'All orders' || order.status === statusFilter
-    const matchesQuery = `${order.id} ${order.customer}`.toLowerCase().includes(query.trim().toLowerCase())
+    const matchesQuery = `${order.id} ${order.customerName}`.toLowerCase().includes(query.trim().toLowerCase())
     return matchesStatus && matchesQuery
-  }), [query, statusFilter])
+  }), [orders, query, statusFilter])
 
   return (
     <div className="page-stack">
@@ -36,25 +36,25 @@ function Orders() {
               <option>Shipped</option>
             </select>
           </label>
-          <span className="table-toolbar__count">{orders.length} orders</span>
+          <span className="table-toolbar__count">{filteredOrders.length} orders</span>
         </div>
         <div className="table-scroll">
           <table className="data-table">
             <thead><tr><th>Order</th><th>Customer</th><th>Created</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
             <tbody>
-              {orders.map((order) => (
+              {filteredOrders.map((order) => (
                 <tr key={order.id}>
                   <td className="table-primary">#{order.id}</td>
-                  <td>{order.customer}</td>
+                  <td>{order.customerName}</td>
                   <td>{order.date}</td>
-                  <td>{order.items}</td>
+                  <td>{order.itemCount}</td>
                   <td className="table-primary">{formatCurrency(order.total)}</td>
                   <td><StatusBadge tone={order.status === 'Shipped' ? 'positive' : order.status === 'Processing' ? 'info' : 'neutral'}>{order.status}</StatusBadge></td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {!orders.length && <div className="empty-state"><Search aria-hidden="true" size={22} /><h2>No orders found</h2><p>Try a different search or status</p></div>}
+          {!filteredOrders.length && <div className="empty-state"><Search aria-hidden="true" size={22} /><h2>No orders found</h2><p>Try a different search or status</p></div>}
         </div>
       </section>
     </div>

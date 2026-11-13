@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import StatusBadge from '../../components/StatusBadge.jsx'
 import { formatCurrency, getProductStatus } from '../../data/inventory.js'
 
-function Products({ products, search, onSearch, onCreate, onSelectProduct }) {
+function Products({ canManage, products, search, onSearch, onCreate, onSelectProduct }) {
   const [stockFilter, setStockFilter] = useState('All stock')
   const filteredProducts = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -24,10 +24,12 @@ function Products({ products, search, onSearch, onCreate, onSelectProduct }) {
           <h1>Products</h1>
           <p className="page-heading__description">Keep your catalog and stock levels in order</p>
         </div>
-        <button className="button button--primary" onClick={onCreate} type="button">
-          <span className="button__plus">+</span>
-          Add product
-        </button>
+        {canManage && (
+          <button className="button button--primary" onClick={onCreate} type="button">
+            <span className="button__plus">+</span>
+            Add product
+          </button>
+        )}
       </section>
 
       <section className="panel products-panel">
@@ -81,7 +83,7 @@ function Products({ products, search, onSearch, onCreate, onSelectProduct }) {
                     </td>
                     <td className="table-mono">{product.sku}</td>
                     <td>{product.category}</td>
-                    <td className="table-primary">{formatCurrency(Number(product.price))}</td>
+                    <td className="table-primary">{formatCurrency(product.price)}</td>
                     <td>
                       <span className="stock-level">
                         <strong>{product.quantity}</strong>

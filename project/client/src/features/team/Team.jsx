@@ -1,15 +1,14 @@
 import { ShieldCheck } from 'lucide-react'
-import { teamMembers } from '../../data/inventory.js'
 import StatusBadge from '../../components/StatusBadge.jsx'
 
-function Team() {
+function Team({ members }) {
   return (
     <div className="page-stack">
       <section className="page-heading">
         <div>
           <p className="eyebrow">Access control</p>
           <h1>Team</h1>
-          <p className="page-heading__description">People and roles in the Northwind Goods workspace</p>
+          <p className="page-heading__description">People and roles in the Stockroom workspace</p>
         </div>
       </section>
       <section className="team-summary">
@@ -21,13 +20,13 @@ function Team() {
       </section>
       <section className="panel">
         <div className="panel-heading panel-heading--inset">
-          <div><h2>Workspace members</h2><p>{teamMembers.length} people</p></div>
+          <div><h2>Workspace members</h2><p>{members.length} people</p></div>
         </div>
         <div className="table-scroll">
           <table className="data-table team-table">
             <thead><tr><th>Member</th><th>Role</th><th>Status</th></tr></thead>
             <tbody>
-              {teamMembers.map((member) => (
+              {members.map((member) => (
                 <tr key={member.email}>
                   <td>
                     <span className="member-cell">
@@ -35,7 +34,7 @@ function Team() {
                       <span className="member-cell__copy"><strong>{member.name}</strong><span>{member.email}</span></span>
                     </span>
                   </td>
-                  <td>{member.role}</td>
+                  <td>{member.roleLabel}</td>
                   <td><StatusBadge tone={member.status === 'Active' ? 'positive' : 'neutral'}>{member.status}</StatusBadge></td>
                 </tr>
               ))}

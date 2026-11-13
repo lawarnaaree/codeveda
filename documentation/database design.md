@@ -29,5 +29,6 @@ precision is preserved.
 - Order statuses: `Ready to fulfill`, `Processing`, and `Shipped`. New orders
   start as `Processing`.
 - Orders store one customer name. Products are archived rather than deleted.
-- Store monetary values as PostgreSQL `NUMERIC`; keep decimal precision when
-  returning them through the API.
+- Monetary values use PostgreSQL `NUMERIC(12, 2)` and are denominated in
+  Nepalese rupees (NPR). The currency is fixed for this application rather
+  than stored per row; the API preserves decimal precision in string values.
